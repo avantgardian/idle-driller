@@ -164,15 +164,15 @@ export class HUD {
         this.scrapValue.textContent = String(Math.floor(s.scrap));
         // this.scrapRate.textContent = String(s.scrapRate.toFixed(1)) + '/s';
         this.drillBtn.textContent = s.drillTargetValid
-            ? `🔧 Build Drill (${s.drillCost})`
+            ? `🔧 Build Drill (${s.drillCost}) [B]`
             : "🔧 Select a node";
-        this.upgradeBtn.textContent = `⬆ Upgrade Base (${s.upgradeCost})`;
+        this.upgradeBtn.textContent = `⬆ Upgrade Base (${s.upgradeCost}) [U]`;
         this.drillBtn.className = `hud-btn${s.canBuyDrill() && s.drillTargetValid ? "" : " hud-btn-disabled"}`;
         this.upgradeBtn.className = `hud-btn${s.scrap >= s.upgradeCost ? "" : " hud-btn-disabled"}`;
 
         if (s.addDroneTargetValid) {
             this.addDroneBtn.style.display = "";
-            this.addDroneBtn.textContent = `⬆ Add Drone (${s.addDroneCost})`;
+            this.addDroneBtn.textContent = `⬆ Add Drone (${s.addDroneCost}) [D]`;
             this.addDroneBtn.className = `hud-btn${s.canAffordAddDrone() ? "" : " hud-btn-disabled"}`;
         } else {
             this.addDroneBtn.style.display = "none";
@@ -180,7 +180,7 @@ export class HUD {
 
         if (s.capacityUpgradeTargetValid) {
             this.capacityBtn.style.display = "";
-            this.capacityBtn.textContent = `⬆ Double Capacity (${s.capacityUpgradeCost})`;
+            this.capacityBtn.textContent = `⬆ Double Capacity (${s.capacityUpgradeCost}) [C]`;
             this.capacityBtn.className = `hud-btn${s.canAffordCapacityUpgrade() ? "" : " hud-btn-disabled"}`;
         } else {
             this.capacityBtn.style.display = "none";

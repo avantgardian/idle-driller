@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { TILE_W, TILE_H, MAP_COLS, MAP_ROWS } from "../config";
 import { GameState } from "../state/GameState";
 import { HUD } from "../ui/HUD";
+import { KeybindingsLegend } from "../ui/KeybindingsLegend";
 
 interface NodeData {
   col: number;
@@ -51,6 +52,8 @@ export class GameScene extends Phaser.Scene {
     private selectedNode: NodeData | null = null;
     private selectionRing: Phaser.GameObjects.Image | null = null;
     private selectionTween: Phaser.Tweens.Tween | null = null;
+    private drillNodes: NodeData[] = [];
+    private selectedDrillIndex = -1;
 
     constructor() {
         super("GameScene");
@@ -71,6 +74,34 @@ export class GameScene extends Phaser.Scene {
         this.time.delayedCall(0, () => this.centerCamera());
 
         this.cursors = this.input.keyboard!.createCursorKeys();
+
+        this.input.keyboard!.on('keydown', (event: KeyboardEvent) => {
+            switch (event.code) {
+                case 'Tab':
+                    event.preventDefault();
+                    if (event.shiftKey) this.selectPrevDrill();
+                    else this.selectNextDrill();
+                    break;
+                case 'KeyB':
+                    this.onBuyDrill();
+                    break;
+                case 'KeyD':
+                    this.onAddDrone();
+                    break;
+                case 'KeyC':
+                    this.onUpgradeCapacity();
+                    break;
+                case 'KeyU':
+                    this.onUpgradeBase();
+                    break;
+                case 'KeyN':
+                    this.selectNextEmptyNode();
+                    break;
+                case 'KeyO':
+                    this.hud.toggleOverdrive();
+                    break;
+            }
+        });
 
         this.input.on(
             "pointerdown",
@@ -133,6 +164,8 @@ export class GameScene extends Phaser.Scene {
             () => this.onRestart(),
             () => this.state.clickOverdrive(),
         );
+
+        new KeybindingsLegend();
     }
 
     private onSave() {
@@ -403,6 +436,8 @@ export class GameScene extends Phaser.Scene {
         node.drillSprite = drill;
         node.drillLevel = drillLevel;
         node.capacityUpgraded = capacityUpgraded;
+        this.drillNodes.push(node);
+        this.drillNodes.sort((a, b) => a.col - b.col || a.row - b.row);
         for (let i = 0; i < drillLevel; i++) {
             this.startCarrierLoop(node, i);
         }
@@ -452,6 +487,11 @@ export class GameScene extends Phaser.Scene {
         }
 
         this.selectedNode = node;
+        if (node && node.hasDrill) {
+            this.selectedDrillIndex = this.drillNodes.indexOf(node);
+        } else {
+            this.selectedDrillIndex = -1;
+        }
         this.state.setDrillTargetValid(node !== null && !node.hasDrill);
         this.state.setAddDroneTargetValid(
             node !== null && node.hasDrill && node.drillSprite !== null,
@@ -477,6 +517,35 @@ export class GameScene extends Phaser.Scene {
                 repeat: -1,
                 ease: "Sine.easeInOut",
             });
+        }
+    }
+
+    private selectNextDrill() {
+        if (this.drillNodes.length === 0) return;
+        if (this.selectedDrillIndex < 0) this.selectedDrillIndex = 0;
+        else this.selectedDrillIndex = (this.selectedDrillIndex + 1) % this.drillNodes.length;
+        this.selectNode(this.drillNodes[this.selectedDrillIndex]);
+    }
+
+    private selectPrevDrill() {
+        if (this.drillNodes.length === 0) return;
+        if (this.selectedDrillIndex < 0) this.selectedDrillIndex = this.drillNodes.length - 1;
+        else this.selectedDrillIndex = (this.selectedDrillIndex - 1 + this.drillNodes.length) % this.drillNodes.length;
+        this.selectNode(this.drillNodes[this.selectedDrillIndex]);
+    }
+
+    private selectNextEmptyNode() {
+        const unlocked = this.state.unlockedNodeCount;
+        if (unlocked === 0) return;
+        const current = this.selectedNode;
+        const startIdx = current ? this.nodes.indexOf(current) + 1 : 0;
+        for (let i = 0; i < unlocked; i++) {
+            const idx = (startIdx + i) % unlocked;
+            const node = this.nodes[idx];
+            if (node && !node.hasDrill) {
+                this.selectNode(node);
+                return;
+            }
         }
     }
 
@@ -534,6 +603,8 @@ export class GameScene extends Phaser.Scene {
                 drill.on("pointerdown", () => this.onNodeClick(target));
                 drill.play("drill-anim");
                 target.drillSprite = drill;
+                this.drillNodes.push(target);
+                this.drillNodes.sort((a, b) => a.col - b.col || a.row - b.row);
                 this.syncNodeRefs();
                 this.state.save();
                 this.showFloatingText(endX, endY - 36, "🔧 Drill!");
